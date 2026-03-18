@@ -1,4 +1,5 @@
 import os
+import shutil
 import streamlit as st
 from ingest import ingest_uploaded_files
 from chain import load_qa_chain
@@ -15,8 +16,13 @@ uploaded_files = st.file_uploader(
 
 if uploaded_files:
     if st.button("Process Documents"):
+        if os.path.exists("faiss_index"):
+            shutil.rmtree("faiss_index")
+        st.cache_resource.clear()
+
         with st.spinner("Reading and indexing your documents..."):
             success = ingest_uploaded_files(uploaded_files)
+
         if success:
             st.success(f"Done! {len(uploaded_files)} file(s) processed. Ask your questions below.")
             st.session_state.messages = []
@@ -55,5 +61,6 @@ if os.path.exists("faiss_index"):
                     st.caption(doc.page_content[:300] + "...")
 
         st.session_state.messages.append({"role": "assistant", "content": answer})
+
 else:
     st.info("Please upload documents and click 'Process Documents' to get started.")
