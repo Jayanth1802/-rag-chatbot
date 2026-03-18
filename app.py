@@ -1,0 +1,38 @@
+import streamlit as st
+from chain import load_qa_chain
+
+st.set_page_config(page_title="RAG Chatbot", page_icon="🧠")
+st.title("RAG Document Q&A")
+st.caption("Ask anything from your uploaded documents")
+
+@st.cache_resource
+def get_chain():
+    return load_qa_chain()
+
+chain, retriever = get_chain()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+if prompt := st.chat_input("Ask a question from your docs..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            answer = chain.invoke(prompt)
+            sources = retriever.invoke(prompt)
+
+        st.markdown(answer)
+
+        with st.expander("Sources used"):
+            for i, doc in enumerate(sources):
+                st.markdown(f"**Chunk {i+1}** — {doc.metadata.get('source', 'unknown')}")
+                st.caption(doc.page_content[:300] + "...")
+
+    st.session_state.messages.append({"role": "assistant", "content": answer})
