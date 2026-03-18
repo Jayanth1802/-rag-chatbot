@@ -8,3 +8,6 @@ sentence-transformers
 streamlit
 pypdf
 python-dotenv
+python-docx
+python-pptx
+docx2txt

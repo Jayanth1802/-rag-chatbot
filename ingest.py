@@ -4,7 +4,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from docx import Document as DocxDocument
+from docx2txt import process as docx_process
 from pptx import Presentation
 from langchain.schema import Document
 
@@ -15,8 +15,7 @@ def load_pdf(file_path):
     return loader.load()
 
 def load_docx(file_path):
-    doc = DocxDocument(file_path)
-    text = "\n".join([para.text for para in doc.paragraphs if para.text.strip()])
+    text = docx_process(file_path)
     return [Document(page_content=text, metadata={"source": file_path})]
 
 def load_pptx(file_path):
