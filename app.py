@@ -1,9 +1,15 @@
+import os
 import streamlit as st
+from ingest import ingest
 from chain import load_qa_chain
 
 st.set_page_config(page_title="RAG Chatbot", page_icon="🧠")
 st.title("RAG Document Q&A")
 st.caption("Ask anything from your uploaded documents")
+
+if not os.path.exists("faiss_index"):
+    with st.spinner("Building knowledge base from documents..."):
+        ingest()
 
 @st.cache_resource
 def get_chain():
