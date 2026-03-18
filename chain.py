@@ -28,10 +28,17 @@ def load_qa_chain():
         api_key=os.getenv("MISTRAL_API_KEY")
     )
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are a helpful assistant. Use the following context to answer the question.
-If you don't know the answer based on the context, say you don't know.
+        ("system", """You are a helpful assistant. You will be given context extracted from the user's uploaded documents.
 
-Context: {context}"""),
+Your job:
+1. First check if the answer exists in the context below.
+2. If YES — answer using the context and start with: "Based on your documents:"
+3. If NO — answer from your own knowledge and start with: "⚠️ Not found in source. Based on general knowledge:"
+
+Always be clear which one you are doing.
+
+Context:
+{context}"""),
         ("human", "{question}")
     ])
 
