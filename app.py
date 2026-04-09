@@ -49,9 +49,16 @@ if os.path.exists("faiss_index"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
+            # ✅ Fixed
             with st.spinner("Thinking..."):
-                answer = chain.invoke(prompt)
+                result = chain.invoke(prompt)
                 sources = retriever.invoke(prompt)
+
+            # Handle both string and dict responses safely
+            if isinstance(result, dict):
+                answer = result.get("result") or result.get("answer") or str(result)
+            else:
+                answer = result
 
             st.markdown(answer)
 
