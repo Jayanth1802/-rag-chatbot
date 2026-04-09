@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_mistralai import ChatMistralAI
@@ -23,10 +24,20 @@ def load_qa_chain():
     retriever = vectorstore.as_retriever(
         search_kwargs={"k": 3}
     )
+
+    api_key = (
+        st.secrets.get("MISTRAL_API_KEY")
+        or os.getenv("MISTRAL_API_KEY")
+    )
+
+    if not api_key:
+        raise ValueError("MISTRAL_API_KEY not found in Streamlit secrets or .env file.")
+
     llm = ChatMistralAI(
         model="mistral-small-latest",
-        api_key=os.getenv("MISTRAL_API_KEY")
+        api_key=api_key
     )
+
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are a helpful assistant. You will be given context extracted from the user's uploaded documents.
 
@@ -51,4 +62,5 @@ Context:
         | llm
         | StrOutputParser()
     )
+
     return chain, retriever
