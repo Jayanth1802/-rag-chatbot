@@ -10,13 +10,16 @@ from langchain_core.documents import Document
 
 FAISS_PATH = "faiss_index"
 
+
 def load_pdf(file_path):
     loader = PyPDFLoader(file_path)
     return loader.load()
 
+
 def load_docx(file_path):
     text = docx_process(file_path)
     return [Document(page_content=text, metadata={"source": file_path})]
+
 
 def load_pptx(file_path):
     prs = Presentation(file_path)
@@ -27,35 +30,50 @@ def load_pptx(file_path):
                 text += shape.text + "\n"
     return [Document(page_content=text, metadata={"source": file_path})]
 
+
 def ingest_uploaded_files(uploaded_files):
     all_documents = []
 
     for uploaded_file in uploaded_files:
         suffix = os.path.splitext(uploaded_file.name)[1].lower()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(uploaded_file.read())
-            tmp_path = tmp.name
+        tmp_path = None
 
-        if suffix == ".pdf":
-            docs = load_pdf(tmp_path)
-        elif suffix == ".docx":
-            docs = load_docx(tmp_path)
-        elif suffix == ".pptx":
-            docs = load_pptx(tmp_path)
-        else:
-            continue
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(uploaded_file.read())
+                tmp_path = tmp.name
 
-        all_documents.extend(docs)
-        os.unlink(tmp_path)
+            if suffix == ".pdf":
+                docs = load_pdf(tmp_path)
+            elif suffix == ".docx":
+                docs = load_docx(tmp_path)
+            elif suffix == ".pptx":
+                docs = load_pptx(tmp_path)
+            else:
+                continue
+
+            # Keep only documents that actually contain extractable text
+            docs = [d for d in docs if d.page_content and d.page_content.strip()]
+            all_documents.extend(docs)
+
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
 
     if not all_documents:
-        return False
+        raise ValueError(
+            "No readable text could be extracted from the uploaded file(s). "
+            "They may be empty, image-only/scanned, or corrupted."
+        )
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=50
     )
     chunks = splitter.split_documents(all_documents)
+
+    if not chunks:
+        raise ValueError("Text was extracted but no chunks could be created from it.")
 
     embeddings = HuggingFaceEmbeddings(
         model_name="all-MiniLM-L6-v2"

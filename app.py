@@ -20,21 +20,27 @@ if uploaded_files:
             shutil.rmtree("faiss_index")
         st.cache_resource.clear()
 
+        success = False
         with st.spinner("Reading and indexing your documents..."):
-            success = ingest_uploaded_files(uploaded_files)
+            try:
+                success = ingest_uploaded_files(uploaded_files)
+            except Exception as e:
+                st.error(f"Could not process files: {e}")
 
         if success:
             st.success(f"Done! {len(uploaded_files)} file(s) processed. Ask your questions below.")
             st.session_state.messages = []
-        else:
-            st.error("Could not process files. Please try again.")
 
 if os.path.exists("faiss_index"):
     @st.cache_resource
     def get_chain():
         return load_qa_chain()
 
-    chain, retriever = get_chain()
+    try:
+        chain, retriever = get_chain()
+    except Exception as e:
+        st.error(f"Could not load the Q&A chain: {e}")
+        st.stop()
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -49,10 +55,13 @@ if os.path.exists("faiss_index"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            # ✅ Fixed
             with st.spinner("Thinking..."):
-                result = chain.invoke(prompt)
-                sources = retriever.invoke(prompt)
+                try:
+                    result = chain.invoke(prompt)
+                    sources = retriever.invoke(prompt)
+                except Exception as e:
+                    st.error(f"Something went wrong while answering: {e}")
+                    st.stop()
 
             # Handle both string and dict responses safely
             if isinstance(result, dict):
