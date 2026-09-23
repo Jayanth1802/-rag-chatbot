@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_mistralai import ChatMistralAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
@@ -11,6 +11,16 @@ from langchain_core.runnables import RunnablePassthrough
 load_dotenv()
 
 FAISS_PATH = "faiss_index"
+
+
+def get_secret(key):
+    """Safely read a secret from Streamlit secrets, falling back to None
+    if no secrets.toml exists at all (common in local dev)."""
+    try:
+        return st.secrets.get(key)
+    except Exception:
+        return None
+
 
 def load_qa_chain():
     embeddings = HuggingFaceEmbeddings(
@@ -25,17 +35,19 @@ def load_qa_chain():
         search_kwargs={"k": 3}
     )
 
-    api_key = (
-        st.secrets.get("MISTRAL_API_KEY")
-        or os.getenv("MISTRAL_API_KEY")
-    )
+    api_key = get_secret("GROQ_API_KEY") or os.getenv("GROQ_API_KEY")
 
     if not api_key:
-        raise ValueError("MISTRAL_API_KEY not found in Streamlit secrets or .env file.")
+        raise ValueError(
+            "GROQ_API_KEY not found. Add it to a .env file (GROQ_API_KEY=your_key) "
+            "or to .streamlit/secrets.toml (GROQ_API_KEY = \"your_key\")."
+        )
 
-    llm = ChatMistralAI(
-        model="mistral-small-latest",
-        api_key=api_key
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=api_key,
+        max_retries=5,
+        timeout=60
     )
 
     prompt = ChatPromptTemplate.from_messages([

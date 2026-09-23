@@ -1,4 +1,5 @@
 import os
+import time
 import shutil
 import streamlit as st
 from ingest import ingest_uploaded_files
@@ -7,6 +8,27 @@ from chain import load_qa_chain
 st.set_page_config(page_title="RAG Chatbot", page_icon="🧠")
 st.title("RAG Document Q&A")
 st.caption("Upload your documents and ask anything from them")
+
+
+def invoke_with_retry(chain, prompt, max_retries=4):
+    """Invoke the chain with exponential backoff on Mistral rate-limit errors."""
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            return chain.invoke(prompt)
+        except Exception as e:
+            last_error = e
+            if "429" in str(e) or "rate_limited" in str(e).lower():
+                wait = 2 ** attempt  # 1s, 2s, 4s, 8s...
+                st.warning(f"Rate limited by Mistral — retrying in {wait}s... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait)
+            else:
+                raise
+    raise Exception(
+        f"Mistral rate limit persists after {max_retries} retries. "
+        f"Please wait a minute before trying again. ({last_error})"
+    )
+
 
 uploaded_files = st.file_uploader(
     "Upload your files (PDF, PPTX, DOCX)",
@@ -57,7 +79,7 @@ if os.path.exists("faiss_index"):
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
-                    result = chain.invoke(prompt)
+                    result = invoke_with_retry(chain, prompt)
                     sources = retriever.invoke(prompt)
                 except Exception as e:
                     st.error(f"Something went wrong while answering: {e}")
