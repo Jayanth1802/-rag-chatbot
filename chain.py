@@ -44,7 +44,7 @@ def load_qa_chain():
         )
 
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="llama-3.1-8b-instant",
         api_key=api_key,
         max_retries=5,
         timeout=60
