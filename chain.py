@@ -44,7 +44,7 @@ def load_qa_chain():
         )
 
     llm = ChatGroq(
-        model="llama-3.1-8b-instant",
+        model="openai/gpt-oss-20b",
         api_key=api_key,
         max_retries=5,
         timeout=60
