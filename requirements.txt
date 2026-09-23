@@ -1,7 +1,7 @@
 langchain-community
 langchain-core
 langchain-huggingface
-langchain-mistralai
+langchain-groq
 langchain-text-splitters
 faiss-cpu
 sentence-transformers
